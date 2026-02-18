@@ -17,6 +17,26 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3001;
 
+// Basic auth middleware (enabled when AUTH_PASSWORD env var is set)
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
+if (AUTH_PASSWORD) {
+  console.log('Password protection enabled');
+  app.use((req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Basic ')) {
+      res.set('WWW-Authenticate', 'Basic realm="Ghost Scribe"');
+      return res.status(401).send('Authentication required');
+    }
+    const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
+    const password = credentials.slice(credentials.indexOf(':') + 1);
+    if (password === AUTH_PASSWORD) {
+      return next();
+    }
+    res.set('WWW-Authenticate', 'Basic realm="Ghost Scribe"');
+    return res.status(401).send('Invalid credentials');
+  });
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
