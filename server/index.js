@@ -30,9 +30,15 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 // Serve built client in production
 const clientBuild = path.join(__dirname, '..', 'client', 'dist');
 app.use(express.static(clientBuild));
-app.get('/{*splat}', (req, res) => {
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(clientBuild, 'index.html'));
+
+// SPA fallback - serve index.html for non-API routes
+app.use((req, res, next) => {
+  if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+    res.sendFile(path.join(clientBuild, 'index.html'), (err) => {
+      if (err) next();
+    });
+  } else {
+    next();
   }
 });
 

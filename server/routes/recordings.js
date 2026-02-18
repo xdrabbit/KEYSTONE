@@ -44,6 +44,48 @@ router.get('/', (req, res) => {
   res.json(recordings);
 });
 
+// Search across all transcripts (must be before /:id to avoid "search" matching as an id)
+router.get('/search/query', (req, res) => {
+  const { q, recordingId } = req.query;
+  if (!q) return res.status(400).json({ error: 'Query parameter q is required' });
+
+  let query;
+  let params;
+
+  if (recordingId) {
+    query = `
+      SELECT s.*, sf.rank,
+             r.original_name as recording_name
+      FROM segments_fts sf
+      JOIN segments s ON s.id = sf.rowid
+      JOIN recordings r ON r.id = s.recording_id
+      WHERE segments_fts MATCH ? AND sf.recording_id = ?
+      ORDER BY sf.rank
+      LIMIT 100
+    `;
+    params = [q, recordingId];
+  } else {
+    query = `
+      SELECT s.*, sf.rank,
+             r.original_name as recording_name
+      FROM segments_fts sf
+      JOIN segments s ON s.id = sf.rowid
+      JOIN recordings r ON r.id = s.recording_id
+      WHERE segments_fts MATCH ?
+      ORDER BY sf.rank
+      LIMIT 100
+    `;
+    params = [q];
+  }
+
+  try {
+    const results = db.prepare(query).all(...params);
+    res.json(results);
+  } catch (err) {
+    res.status(400).json({ error: 'Invalid search query', details: err.message });
+  }
+});
+
 // Get single recording
 router.get('/:id', (req, res) => {
   const recording = db.prepare('SELECT * FROM recordings WHERE id = ?').get(req.params.id);
@@ -145,48 +187,6 @@ router.put('/:id/speakers/:originalLabel', (req, res) => {
   }
 
   res.json({ success: true, originalLabel: req.params.originalLabel, displayName: displayName.trim() });
-});
-
-// Search across all transcripts
-router.get('/search/query', (req, res) => {
-  const { q, recordingId } = req.query;
-  if (!q) return res.status(400).json({ error: 'Query parameter q is required' });
-
-  let query;
-  let params;
-
-  if (recordingId) {
-    query = `
-      SELECT s.*, sf.rank,
-             r.original_name as recording_name
-      FROM segments_fts sf
-      JOIN segments s ON s.id = sf.rowid
-      JOIN recordings r ON r.id = s.recording_id
-      WHERE segments_fts MATCH ? AND sf.recording_id = ?
-      ORDER BY sf.rank
-      LIMIT 100
-    `;
-    params = [q, recordingId];
-  } else {
-    query = `
-      SELECT s.*, sf.rank,
-             r.original_name as recording_name
-      FROM segments_fts sf
-      JOIN segments s ON s.id = sf.rowid
-      JOIN recordings r ON r.id = s.recording_id
-      WHERE segments_fts MATCH ?
-      ORDER BY sf.rank
-      LIMIT 100
-    `;
-    params = [q];
-  }
-
-  try {
-    const results = db.prepare(query).all(...params);
-    res.json(results);
-  } catch (err) {
-    res.status(400).json({ error: 'Invalid search query', details: err.message });
-  }
 });
 
 // Export transcript

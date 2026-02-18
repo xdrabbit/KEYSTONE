@@ -12,6 +12,7 @@ export default function Dashboard() {
   const [recordings, setRecordings] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [uploadError, setUploadError] = useState('');
   const [model, setModel] = useState('large-v3');
   const navigate = useNavigate();
 
@@ -35,12 +36,14 @@ export default function Dashboard() {
     if (acceptedFiles.length === 0) return;
 
     setUploading(true);
+    setUploadError('');
     for (const file of acceptedFiles) {
       setUploadProgress(`Uploading ${file.name}...`);
       try {
         await uploadAudio(file, { model, autoTranscribe: true });
       } catch (err) {
         console.error(`Failed to upload ${file.name}:`, err);
+        setUploadError(`Upload failed: ${err.message}. Is the server running?`);
       }
     }
     setUploading(false);
@@ -160,6 +163,38 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Upload error */}
+      {uploadError && (
+        <div style={{
+          padding: '12px 16px',
+          marginBottom: 16,
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: 'var(--radius-sm)',
+          color: 'var(--error)',
+          fontSize: 13,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <AlertCircle size={16} />
+          {uploadError}
+          <button
+            onClick={() => setUploadError('')}
+            style={{
+              marginLeft: 'auto',
+              background: 'none',
+              border: 'none',
+              color: 'var(--error)',
+              cursor: 'pointer',
+              fontSize: 16,
+            }}
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Recordings list */}
       {recordings.length === 0 ? (
