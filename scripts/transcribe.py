@@ -118,7 +118,12 @@ def main():
     if hf_token:
         progress("Running speaker diarization...")
         try:
-            diarize_model = whisperx.DiarizationPipeline(
+            # whisperx 3.8+ moved DiarizationPipeline to whisperx.diarize
+            try:
+                from whisperx.diarize import DiarizationPipeline
+            except ImportError:
+                DiarizationPipeline = whisperx.DiarizationPipeline
+            diarize_model = DiarizationPipeline(
                 use_auth_token=hf_token, device=device
             )
             diarize_kwargs = {}
