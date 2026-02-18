@@ -1,0 +1,36 @@
+{
+  "name": "ghost-scribe",
+  "version": "1.0.0",
+  "description": "Local audio transcription app with WhisperX, speaker diarization, and full-text search",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "cd client && npx vite --host",
+    "build": "cd client && npx vite build",
+    "transcribe": "python3 scripts/transcribe.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:44311/git/xdrabbit/ghost-scribe"
+  },
+  "keywords": [
+    "transcription",
+    "whisperx",
+    "diarization",
+    "audio"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.6",
+    "docx": "^9.5.3",
+    "express": "^5.2.1",
+    "multer": "^2.0.2",
+    "pdfkit": "^0.17.2",
+    "socket.io": "^4.8.3",
+    "uuid": "^13.0.0"
+  }
+}

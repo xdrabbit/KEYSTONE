@@ -1,0 +1,12 @@
+node_modules/
+client/node_modules/
+client/dist/
+data/
+uploads/
+*.db
+*.db-wal
+*.db-shm
+.env
+__pycache__/
+*.pyc
+.DS_Store
