@@ -124,7 +124,7 @@ def main():
             except ImportError:
                 DiarizationPipeline = whisperx.DiarizationPipeline
             diarize_model = DiarizationPipeline(
-                use_auth_token=hf_token, device=device
+                token=hf_token, device=device
             )
             diarize_kwargs = {}
             if args.min_speakers is not None:
