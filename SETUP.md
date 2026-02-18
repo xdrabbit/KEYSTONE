@@ -55,10 +55,13 @@ Speaker diarization requires a HuggingFace token (free account):
 export HF_TOKEN=hf_your_token_here
 ```
 
-Or create a `.env` file:
+Or copy the example environment file and edit it:
+```bash
+cp .env.example .env
+# Edit .env and paste your HuggingFace token
 ```
-HF_TOKEN=hf_your_token_here
-```
+
+The `.env` file is automatically loaded by both the Node.js server and the Python transcription script. You can also configure `PORT` and `AUTH_PASSWORD` in this file. See `.env.example` for all available options.
 
 ## Running
 

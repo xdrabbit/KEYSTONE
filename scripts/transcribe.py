@@ -20,6 +20,9 @@ import sys
 import os
 import time
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env'))
+
 
 def progress(message):
     """Send progress message to parent process via stdout."""
