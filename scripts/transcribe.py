@@ -34,8 +34,8 @@ def main():
     parser.add_argument("--model", default="large-v3", help="Whisper model size")
     parser.add_argument("--language", default=None, help="Language code (auto-detect if not set)")
     parser.add_argument("--device", default="cuda", help="Device: cuda or cpu")
-    parser.add_argument("--batch-size", type=int, default=16, help="Batch size for transcription")
-    parser.add_argument("--compute-type", default="float16", help="Compute type: float16, int8, etc.")
+    parser.add_argument("--batch-size", type=int, default=4, help="Batch size for transcription")
+    parser.add_argument("--compute-type", default="int8_float16", help="Compute type: float16, int8, int8_float16, etc.")
     parser.add_argument("--hf-token", default=None, help="HuggingFace token for diarization")
     parser.add_argument("--min-speakers", type=int, default=None, help="Min speakers for diarization")
     parser.add_argument("--max-speakers", type=int, default=None, help="Max speakers for diarization")
@@ -86,6 +86,14 @@ def main():
     detected_language = result.get("language", args.language or "en")
     progress(f"Detected language: {detected_language}")
 
+    # Free transcription model VRAM before loading alignment model
+    import gc
+    del model
+    gc.collect()
+    if device == "cuda":
+        torch.cuda.empty_cache()
+    progress("Released transcription model from VRAM")
+
     # Step 2: Align word-level timestamps
     progress("Aligning word-level timestamps...")
     try:
@@ -97,6 +105,12 @@ def main():
             return_char_alignments=False,
         )
         progress("Word alignment complete")
+
+        # Free alignment model before diarization
+        del align_model, align_metadata
+        gc.collect()
+        if device == "cuda":
+            torch.cuda.empty_cache()
     except Exception as e:
         progress(f"Word alignment failed (continuing without): {e}")
 
@@ -116,6 +130,12 @@ def main():
             diarize_segments = diarize_model(audio, **diarize_kwargs)
             result = whisperx.assign_word_speakers(diarize_segments, result)
             progress("Speaker diarization complete")
+
+            # Free diarization model
+            del diarize_model, diarize_segments
+            gc.collect()
+            if device == "cuda":
+                torch.cuda.empty_cache()
         except Exception as e:
             progress(f"Diarization failed (continuing without): {e}")
     else:
@@ -159,10 +179,8 @@ def main():
     progress(f"Output written to {args.output_json}")
     progress(f"Total segments: {len(output['segments'])}")
 
-    # Clean up GPU memory
+    # Final VRAM cleanup
     if device == "cuda":
-        import gc
-        del model
         gc.collect()
         torch.cuda.empty_cache()
 
