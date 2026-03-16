@@ -128,8 +128,8 @@ router.post('/:id/transcribe', (req, res) => {
   db.prepare('DELETE FROM segments WHERE recording_id = ?').run(req.params.id);
   db.prepare('DELETE FROM speaker_labels WHERE recording_id = ?').run(req.params.id);
 
-  const model = req.body.model || recording.model || 'large-v3';
-  const language = req.body.language || null;
+  const model = (req.body && req.body.model) || recording.model || 'large-v3';
+  const language = (req.body && req.body.language) || null;
 
   startTranscription(req.params.id, audioPath, { model, language });
 

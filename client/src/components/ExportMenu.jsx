@@ -24,7 +24,7 @@ export default function ExportMenu({ recordingId }) {
 
   return (
     <div ref={menuRef} style={{ position: 'relative' }}>
-      <button className="btn" onClick={() => setOpen(!open)}>
+      <button data-ghost="Export the transcript in the chosen format" className="btn" onClick={() => setOpen(!open)}>
         <Download size={15} />
         Export
       </button>

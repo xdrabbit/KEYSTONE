@@ -100,7 +100,7 @@ export default function Dashboard() {
       </div>
 
       {/* Model selector */}
-      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div data-ghost="Select the transcription model here" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
         <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Whisper Model:</label>
         <select
           value={model}
@@ -123,7 +123,7 @@ export default function Dashboard() {
       </div>
 
       {/* Drop zone */}
-      <div
+      <div data-ghost="Click here to select an audio file for transcription or drag and drop a file"
         {...getRootProps()}
         style={{
           border: `2px dashed ${isDragActive ? 'var(--accent)' : 'var(--border)'}`,

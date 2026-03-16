@@ -3,6 +3,7 @@ const path = require('path');
 const db = require('../database');
 
 const SCRIPT_PATH = path.join(__dirname, '..', '..', 'scripts', 'transcribe.py');
+const VENV_PYTHON = path.join(__dirname, '..', '..', 'venv', 'bin', 'python3');
 
 function startTranscription(recordingId, audioPath, options = {}) {
   const { model = 'large-v3', language = null } = options;
@@ -22,7 +23,11 @@ function startTranscription(recordingId, audioPath, options = {}) {
     args.push('--language', language);
   }
 
-  const proc = spawn('python3', args, {
+  // Use venv python if available, otherwise fallback to system python3
+  const fs = require('fs');
+  const pythonBin = fs.existsSync(VENV_PYTHON) ? VENV_PYTHON : 'python3';
+
+  const proc = spawn(pythonBin, args, {
     env: { ...process.env, PYTHONUNBUFFERED: '1' },
   });
 

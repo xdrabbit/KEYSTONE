@@ -159,7 +159,7 @@ export default function TranscriptView() {
         minHeight: 0,
       }}>
         {/* Main transcript */}
-        <div style={{
+        <div data-ghost="Click anywhere to start the audio or jump to a location" style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
@@ -170,7 +170,7 @@ export default function TranscriptView() {
           minWidth: 0,
         }}>
           {/* Transcript search bar */}
-          <div style={{
+          <div data-ghost="Search for a word or phrase with quotes. Use operators AND/OR for advanced search" style={{
             padding: '10px 14px',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
@@ -237,7 +237,7 @@ export default function TranscriptView() {
 
           {/* Search results navigation */}
           {localResults && localResults.length > 0 && (
-            <div style={{
+            <div data-ghost="Click on a RESULT TO JUMP LOCATIONS" style={{
               padding: '6px 14px',
               borderBottom: '1px solid var(--border)',
               display: 'flex',

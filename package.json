@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node server/index.js",
     "client": "cd client && npx vite --host",
-    "build": "cd client && npx vite build",
+    "build": "node scripts/generate-release-manifest.js && cd client && npx vite build",
     "transcribe": "python3 scripts/transcribe.py"
   },
   "repository": {
@@ -29,6 +29,7 @@
     "docx": "^9.5.3",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "ghost-lens": "^0.1.0",
     "multer": "^2.0.2",
     "pdfkit": "^0.17.2",
     "socket.io": "^4.8.3",

@@ -120,7 +120,7 @@ export default function AudioPlayer({ audioUrl, onTimeUpdate, seekToRef }) {
       padding: 16,
     }}>
       {/* Waveform */}
-      <div ref={containerRef} style={{ marginBottom: 12, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }} />
+      <div data-ghost="Scrub through the recording. Click any segment in the transcript to jump to that moment." ref={containerRef} style={{ marginBottom: 12, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }} />
 
       {/* Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

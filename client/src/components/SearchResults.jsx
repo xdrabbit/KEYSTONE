@@ -49,7 +49,7 @@ export default function SearchResults({ results, query, loading, onResultClick, 
               {results.length} result{results.length !== 1 ? 's' : ''} found
             </div>
             {results.map((result, i) => (
-              <button
+              <button 
                 key={`${result.id}-${i}`}
                 onClick={() => onResultClick(result)}
                 style={{
