@@ -1,0 +1,23 @@
+{
+  "product": {
+    "name": "Ghost Scribe",
+    "code": "GS",
+    "public_version": "1.0.0",
+    "release_channel": "production"
+  },
+  "source": {
+    "commit": "a07dc645",
+    "branch": "claude/audio-transcription-app-CpP6e",
+    "message": "feat: implement Unified Versioning Architecture (Lite)",
+    "provider": "git"
+  },
+  "deployment": {
+    "platform": "local",
+    "environment": "production",
+    "deployed_at": "2026-04-07T00:13:00.920Z"
+  },
+  "build": {
+    "build_id": "GS-1.0.0+202604070013.shaa07dc645",
+    "generated_at": "2026-04-07T00:13:00.920Z"
+  }
+}

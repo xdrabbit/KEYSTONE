@@ -7,7 +7,12 @@ import TranscriptView from './components/TranscriptView';
 
 export default function App() {
   return (
-    <GhostLens idleDelay={3000}>
+    <GhostLens 
+      idleDelay={6000}
+      useAIHelp={true}
+      heartbeatInterval={5000}
+      maxActiveDuration={60000}
+    >
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />

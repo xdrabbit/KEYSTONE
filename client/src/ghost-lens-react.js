@@ -1,6 +1,7 @@
 /**
  * Ghost Lens - React Integration
  * useGhostLens hook + <GhostLens> provider component
+ * Now with AI-powered help generation!
  */
 
 import { useEffect, useRef, useCallback } from 'react';
@@ -60,4 +61,49 @@ export function GhostLens({ children, ...options }) {
  */
 export function ghost(text) {
   return { 'data-ghost': text };
+}
+
+/**
+ * useGhostLensAI - React hook with AI help generation
+ * 
+ * @param {Object} options - Configuration
+ * @param {boolean} options.useAIHelp - Enable AI help (default true)
+ * @param {string} options.claudeApiKey - Claude API key for fallback
+ * @param {number} options.idleDelay - ms before activation (default 6000)
+ * @param {number} options.heartbeatInterval - Pulse every N ms (default 5000)
+ * @param {number} options.maxActiveDuration - Auto-fade after N ms (default 60000)
+ * @param {Function} options.onActivate - Callback when active
+ * @param {Function} options.onDeactivate - Callback when inactive
+ * @returns {{ activate, deactivate }}
+ * 
+ * @example
+ * const { activate } = useGhostLensAI({ useAIHelp: true });
+ */
+export function useGhostLensAI(options = {}) {
+  const engineRef = useRef(null);
+
+  useEffect(() => {
+    if (options.disabled || isGhostLensDisabled()) return;
+
+    // AI defaults
+    const aiOptions = {
+      idleDelay: 6000,
+      useAIHelp: true,
+      heartbeatInterval: 5000,
+      maxActiveDuration: 60000,
+      ...options,
+    };
+
+    engineRef.current = new GhostLensEngine(null, aiOptions);
+
+    return () => {
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const activate = useCallback(() => engineRef.current?.activate(), []);
+  const deactivate = useCallback(() => engineRef.current?.deactivate(), []);
+
+  return { activate, deactivate };
 }

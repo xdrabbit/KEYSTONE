@@ -23,7 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^12.8.0",
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",
     "docx": "^9.5.3",

@@ -3,13 +3,15 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Search, Users } from 'lucide-react';
 import {
   getRecording, getSegments, renameSpeaker,
-  searchTranscripts, getAudioUrl
+  searchTranscripts, getAudioUrl, draftOrder
 } from '../utils/api';
 import { formatDuration } from '../utils/format';
 import AudioPlayer from './AudioPlayer';
 import TranscriptPanel from './TranscriptPanel';
 import SpeakerRenameModal from './SpeakerRenameModal';
+import VoiceSelectModal from './VoiceSelectModal';
 import ExportMenu from './ExportMenu';
+import { FileText, Loader2 } from 'lucide-react';
 
 export default function TranscriptView() {
   const { id } = useParams();
@@ -23,6 +25,8 @@ export default function TranscriptView() {
   const [renameModal, setRenameModal] = useState(null);
   const [highlightQuery, setHighlightQuery] = useState('');
   const [highlightSegmentId, setHighlightSegmentId] = useState(null);
+  const [showBrightonModal, setShowBrightonModal] = useState(false);
+  const [isBrightonProcessing, setIsBrightonProcessing] = useState(false);
 
   const seekToRef = useRef(null);
 
@@ -100,6 +104,26 @@ export default function TranscriptView() {
     }
   };
 
+  const handleDraftOrder = async (voice) => {
+    setIsBrightonProcessing(true);
+    try {
+      const blob = await draftOrder(id, voice);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const baseName = recording ? recording.original_name.split('.')[0] : 'order';
+      a.download = `${baseName}_order.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setShowBrightonModal(false);
+    } catch (err) {
+      alert(`Drafting failed: ${err.message}`);
+    } finally {
+      setIsBrightonProcessing(false);
+    }
+  };
+
   // Get unique speakers list
   const speakers = Object.entries(speakerMap);
 
@@ -140,6 +164,14 @@ export default function TranscriptView() {
             <span>{segments.length} segments</span>
           </div>
         </div>
+        <button 
+          onClick={() => setShowBrightonModal(true)} 
+          className="btn btn-primary"
+          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <FileText size={16} />
+          Draft Order
+        </button>
         <ExportMenu recordingId={id} />
       </div>
 
@@ -360,6 +392,15 @@ export default function TranscriptView() {
           currentName={renameModal.currentName}
           onRename={handleRename}
           onClose={() => setRenameModal(null)}
+        />
+      )}
+
+      {/* Brighton voice select modal */}
+      {showBrightonModal && (
+        <VoiceSelectModal
+          onDraft={handleDraftOrder}
+          onClose={() => setShowBrightonModal(false)}
+          isProcessing={isBrightonProcessing}
         />
       )}
     </div>

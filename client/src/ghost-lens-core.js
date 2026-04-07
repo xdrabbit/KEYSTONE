@@ -2,13 +2,18 @@
  * Ghost Lens Core Engine
  * Behavioral idle-detection contextual help overlay
  * Zero dependencies - works with React or vanilla JS
+ * 
+ * NEW: AI-powered help generation with Ollama/Claude
  */
+
+import { generateHelp, enrichHelpWithPositions } from './ai-help.js';
+import { AnimatedHelpOverlay } from './animated-overlay.js';
 
 const GHOST_ATTR = 'data-ghost';
 const GHOST_ID_ATTR = 'data-ghost-id';
 
 const defaultOptions = {
-  idleDelay: 3000,        // ms before lens activates
+  idleDelay: 6000,        // ms before lens activates (6 seconds)
   resetDelay: 300,        // ms after activity before resetting timer
   curtainDuration: 600,   // ms for curtain sweep animation
   curtainColor: 'rgba(0, 200, 255, 0.06)',
@@ -19,6 +24,12 @@ const defaultOptions = {
   zIndex: 9999,
   badgeText: 'GHOST LENS',
   badgeSubtext: 'Augmentation Active',
+  heartbeatInterval: 5000,   // heartbeat pulse every 5 seconds
+  maxActiveDuration: 60000,  // max 60 seconds before fade
+  // AI Help options
+  useAIHelp: true,           // Enable AI-powered help generation
+  claudeApiKey: null,        // Optional Claude API key for fallback
+  useHardcodedFirst: false,  // Try data-ghost attributes first before AI
   onActivate: null,
   onDeactivate: null,
 };
@@ -33,6 +44,10 @@ export class GhostLensEngine {
     this.tooltips = [];
     this.curtainEl = null;
     this.badgeEl = null;
+    this.heartbeatTimer = null;
+    this.maxDurationTimer = null;
+    this.activationTime = null;
+    this.animatedOverlay = null;
     this._boundOnActivity = this._onActivity.bind(this);
     this._boundOnDisable = this._onDisable.bind(this);
     this._injectStyles();
@@ -143,6 +158,35 @@ export class GhostLensEngine {
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.6; transform: scale(0.85); }
       }
+      @keyframes ghost-heartbeat-pulse {
+        0% { 
+          box-shadow: 0 0 30px rgba(0,200,255,0.1), 
+                      0 0 0 0 rgba(0,200,255,0.4);
+        }
+        50% { 
+          box-shadow: 0 0 30px rgba(0,200,255,0.2), 
+                      0 0 0 12px rgba(0,200,255,0);
+        }
+        100% { 
+          box-shadow: 0 0 30px rgba(0,200,255,0.1), 
+                      0 0 0 0 rgba(0,200,255,0);
+        }
+      }
+      .ghost-lens-badge.heartbeat {
+        animation: ghost-heartbeat-pulse 0.8s ease-out;
+      }
+      @keyframes ghost-fade-out {
+        to { opacity: 0; }
+      }
+      .ghost-lens-overlay.fade-out {
+        animation: ghost-fade-out 500ms ease-out forwards;
+      }
+      .ghost-lens-badge.fade-out {
+        animation: ghost-fade-out 500ms ease-out forwards;
+      }
+      .ghost-lens-disable.fade-out {
+        animation: ghost-fade-out 500ms ease-out forwards;
+      }
       .ghost-lens-badge-text {
         display: flex;
         flex-direction: column;
@@ -217,13 +261,18 @@ export class GhostLensEngine {
   _activate() {
     if (this.isActive) return;
     this.isActive = true;
+    this.activationTime = Date.now();
     this._renderOverlay();
+    this._startHeartbeat();
+    this._startMaxDurationTimer();
     this.options.onActivate?.();
   }
 
   _deactivate() {
     if (!this.isActive) return;
     this.isActive = false;
+    clearTimeout(this.heartbeatTimer);
+    clearTimeout(this.maxDurationTimer);
     this._clearOverlay();
     this.options.onDeactivate?.();
   }
@@ -232,6 +281,44 @@ export class GhostLensEngine {
     this._deactivate();
     this.destroy();
     localStorage.setItem('ghost-lens-disabled', 'true');
+  }
+
+  _startHeartbeat() {
+    const pulse = () => {
+      if (!this.isActive || !this.badgeEl) return;
+      // Add heartbeat animation class
+      this.badgeEl.classList.remove('heartbeat');
+      // Trigger reflow to restart animation
+      void this.badgeEl.offsetWidth;
+      this.badgeEl.classList.add('heartbeat');
+      // Schedule next pulse
+      this.heartbeatTimer = setTimeout(pulse, this.options.heartbeatInterval);
+    };
+    // Start first pulse after a moment
+    this.heartbeatTimer = setTimeout(pulse, this.options.heartbeatInterval);
+  }
+
+  _startMaxDurationTimer() {
+    this.maxDurationTimer = setTimeout(() => {
+      if (!this.isActive) return;
+      // Fade out and deactivate
+      this._fadeOutAndDeactivate();
+    }, this.options.maxActiveDuration);
+  }
+
+  _fadeOutAndDeactivate() {
+    if (!this.isActive) return;
+    
+    // Add fade-out class to all elements
+    if (this.overlayEl) this.overlayEl.classList.add('fade-out');
+    if (this.badgeEl) this.badgeEl.classList.add('fade-out');
+    if (this.disableBtn) this.disableBtn.classList.add('fade-out');
+    this.tooltips.forEach(t => t.classList.add('fade-out'));
+    
+    // After fade completes, deactivate
+    setTimeout(() => {
+      this._deactivate();
+    }, 500);
   }
 
   _getGhostElements() {
@@ -283,6 +370,13 @@ export class GhostLensEngine {
   }
 
   _renderTooltips() {
+    // Check if we should use AI help first
+    if (this.options.useAIHelp) {
+      this._renderAIHelp();
+      return;
+    }
+
+    // Fall back to hardcoded data-ghost attributes
     const elements = this._getGhostElements();
     elements.forEach((el, i) => {
       const text = el.getAttribute(GHOST_ATTR);
@@ -298,32 +392,17 @@ export class GhostLensEngine {
       tip.textContent = text;
       tip.style.animationDelay = `${i * 40}ms`;
 
-      // Smart positioning with collision offset
+      // Smart positioning
       let top = rect.bottom + 8;
       let left = rect.left;
 
       // Flip up if near bottom
       if (top + 80 > window.innerHeight) {
         top = rect.top - 80;
-      }     
+      }
       // Clamp to viewport
       left = Math.max(8, Math.min(left, window.innerWidth - 240));
       top = Math.max(8, top);
-
-      // Collision detection against already-placed tooltips
-      const TOOLTIP_HEIGHT = 70;
-      let attempts = 0;
-      while (
-        this.tooltips.some(existing => {
-            const eTop = parseFloat(existing.style.top);
-            const eLeft = parseFloat(existing.style.left);
-            return Math.abs(eTop - top) < TOOLTIP_HEIGHT && Math.abs(eLeft - left) < 230;
-        }) && attempts < 8
-      ) {
-        top += TOOLTIP_HEIGHT + 8;
-        if (top + TOOLTIP_HEIGHT > window.innerHeight) top -= (TOOLTIP_HEIGHT + 8) * 2;
-        attempts++;
-      }
 
       tip.style.top = `${top}px`;
       tip.style.left = `${left}px`;
@@ -333,15 +412,49 @@ export class GhostLensEngine {
     });
   }
 
+  async _renderAIHelp() {
+    try {
+      console.log('[Ghost Lens] _renderAIHelp() called');
+      const helpData = await generateHelp(this.options.claudeApiKey);
+      
+      if (!helpData) {
+        console.warn('[Ghost Lens] AI help generation failed, falling back to hardcoded');
+        this._renderTooltips(); // Fallback to hardcoded
+        return;
+      }
+
+      console.log('[Ghost Lens] AI help generated, enriching...', helpData);
+      
+      // Enrich with positions
+      const enrichedHelp = enrichHelpWithPositions(helpData);
+      console.log('[Ghost Lens] Enriched help:', enrichedHelp);
+      
+      // Create and render animated overlay
+      this.animatedOverlay = new AnimatedHelpOverlay(enrichedHelp, {
+        svgZIndex: this.options.zIndex + 1,
+        textZIndex: this.options.zIndex + 2,
+      });
+      
+      console.log('[Ghost Lens] Rendering animated overlay...');
+      this.animatedOverlay.render();
+      console.log('[Ghost Lens] Overlay rendered!');
+    } catch (err) {
+      console.error('[Ghost Lens] AI help error:', err);
+      this._renderTooltips(); // Fallback
+    }
+  }
+
   _clearOverlay() {
     this.overlayEl?.remove();
     this.badgeEl?.remove();
     this.disableBtn?.remove();
     this.tooltips.forEach(t => t.remove());
+    this.animatedOverlay?.destroy();
     this.tooltips = [];
     this.overlayEl = null;
     this.badgeEl = null;
     this.disableBtn = null;
+    this.animatedOverlay = null;
     document.querySelectorAll('.ghost-lens-highlighted').forEach(el => {
       el.classList.remove('ghost-lens-highlighted');
     });
@@ -349,6 +462,8 @@ export class GhostLensEngine {
 
   destroy() {
     clearTimeout(this.idleTimer);
+    clearTimeout(this.heartbeatTimer);
+    clearTimeout(this.maxDurationTimer);
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
     events.forEach(e => document.removeEventListener(e, this._boundOnActivity));
     this._clearOverlay();
