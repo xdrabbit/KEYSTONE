@@ -38,14 +38,18 @@ function toWhisperxShape(resp) {
   };
 }
 
-async function startOpenAITranscription(recordingId, audioPath, options = {}) {
+function startOpenAITranscription(recordingId, audioPath, options = {}) {
   const { language = null } = options;
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
+    // Fail the recording without throwing — throwing from an async function
+    // produces an unhandled rejection that systemd would kill the server over.
+    // Match the fire-and-forget semantics of the WhisperX lane: log + mark errored + return.
+    console.error(`[openai-transcribe:${recordingId}] OPENAI_API_KEY is not set`);
     db.prepare('UPDATE recordings SET status = ?, updated_at = datetime(?) WHERE id = ?')
       .run('error', new Date().toISOString(), recordingId);
-    throw new Error('OPENAI_API_KEY is not set');
+    return { recordingId, engine: 'openai', model: OPENAI_MODEL, error: 'OPENAI_API_KEY is not set' };
   }
 
   db.prepare('UPDATE recordings SET status = ?, engine = ?, updated_at = datetime(?) WHERE id = ?')
