@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [engine, setEngine] = useState('whisperx');
   const [model, setModel] = useState('large-v3');
   const navigate = useNavigate();
 
@@ -40,7 +41,7 @@ export default function Dashboard() {
     for (const file of acceptedFiles) {
       setUploadProgress(`Uploading ${file.name}...`);
       try {
-        await uploadAudio(file, { model, autoTranscribe: true });
+        await uploadAudio(file, { engine, model, autoTranscribe: true });
       } catch (err) {
         console.error(`Failed to upload ${file.name}:`, err);
         setUploadError(`Upload failed: ${err.message}. Is the server running?`);
@@ -49,7 +50,7 @@ export default function Dashboard() {
     setUploading(false);
     setUploadProgress('');
     loadRecordings();
-  }, [model, loadRecordings]);
+  }, [engine, model, loadRecordings]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -74,7 +75,7 @@ export default function Dashboard() {
   const handleRetranscribe = async (e, id) => {
     e.stopPropagation();
     try {
-      await startTranscription(id, { model });
+      await startTranscription(id, { engine, model });
       loadRecordings();
     } catch (err) {
       console.error('Retranscribe failed:', err);
@@ -99,31 +100,58 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Model selector */}
-      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Whisper Model:</label>
-        <select
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          style={{
-            background: 'var(--bg-tertiary)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--text-primary)',
-            padding: '6px 10px',
-            fontSize: 13,
-          }}
-        >
-          <option value="large-v3">large-v3 (best quality)</option>
-          <option value="large-v2">large-v2</option>
-          <option value="medium">medium</option>
-          <option value="small">small</option>
-          <option value="base">base (fastest)</option>
-        </select>
+      {/* Engine + model selector */}
+      <div data-ghost="Select the transcription engine and model here" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Engine:</label>
+          <select
+            value={engine}
+            onChange={(e) => {
+              const next = e.target.value;
+              setEngine(next);
+              setModel(next === 'openai' ? 'gpt-4o-transcribe-diarize' : 'large-v3');
+            }}
+            style={{
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-primary)',
+              padding: '6px 10px',
+              fontSize: 13,
+            }}
+          >
+            <option value="whisperx">WhisperX (local)</option>
+            <option value="openai">OpenAI gpt-4o-transcribe-diarize (cloud)</option>
+          </select>
+        </div>
+
+        {engine === 'whisperx' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Whisper Model:</label>
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              style={{
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                padding: '6px 10px',
+                fontSize: 13,
+              }}
+            >
+              <option value="large-v3">large-v3 (best quality)</option>
+              <option value="large-v2">large-v2</option>
+              <option value="medium">medium</option>
+              <option value="small">small</option>
+              <option value="base">base (fastest)</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Drop zone */}
-      <div
+      <div data-ghost="Click here to select an audio file for transcription or drag and drop a file"
         {...getRootProps()}
         style={{
           border: `2px dashed ${isDragActive ? 'var(--accent)' : 'var(--border)'}`,
@@ -256,6 +284,11 @@ export default function Dashboard() {
                   <span>{formatDate(rec.created_at)}</span>
                   {rec.duration && <span>{formatDuration(rec.duration)}</span>}
                   {rec.language && <span>{rec.language.toUpperCase()}</span>}
+                  {rec.engine && (
+                    <span style={{ color: rec.engine === 'openai' ? 'var(--accent)' : 'var(--text-muted)' }}>
+                      {rec.engine === 'openai' ? 'OpenAI' : 'WhisperX'}
+                    </span>
+                  )}
                 </div>
               </div>
 

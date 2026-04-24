@@ -22,6 +22,7 @@ db.exec(`
     status TEXT NOT NULL DEFAULT 'pending',
     language TEXT,
     model TEXT DEFAULT 'large-v3',
+    engine TEXT NOT NULL DEFAULT 'whisperx',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -99,5 +100,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_words_time ON words(recording_id, start_time);
   CREATE INDEX IF NOT EXISTS idx_speaker_labels ON speaker_labels(recording_id);
 `);
+
+// Migrations for databases created before new columns were added.
+const recordingCols = db.prepare(`PRAGMA table_info(recordings)`).all();
+if (!recordingCols.some((c) => c.name === 'engine')) {
+  db.exec(`ALTER TABLE recordings ADD COLUMN engine TEXT NOT NULL DEFAULT 'whisperx'`);
+}
 
 module.exports = db;

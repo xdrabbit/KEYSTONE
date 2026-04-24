@@ -83,6 +83,28 @@ npm run server        # Start the server (serves both API and built client)
 
 Then open http://localhost:3001
 
+### Running as a systemd service (production on Blackbird)
+
+On the Blackbird host the server is managed by systemd as `keystone.service`,
+so it starts on boot and is auto-restarted if it crashes. Unit file lives at
+`/etc/systemd/system/keystone.service`; it runs `node server/index.js` as user
+`tom`, with `WorkingDirectory=/home/tom/blackbird_dev/KEYSTONE`,
+`EnvironmentFile=/home/tom/blackbird_dev/KEYSTONE/.env`, `Restart=always`, and
+stdout/stderr appended to `/var/log/keystone.log`.
+
+Day-to-day:
+
+```bash
+./restart.sh                             # bounce the service (no sudo needed)
+systemctl status keystone.service        # check health
+tail -f /var/log/keystone.log            # live logs
+```
+
+`./restart.sh` works by SIGTERMing the managed node PID — systemd's
+`Restart=always` brings it right back with the current code on disk, so you
+don't need sudo for routine restarts. See `INCASE System wont start.md` for
+recovery steps if the service won't come back up.
+
 ## Usage
 
 1. **Upload audio** - Drag & drop audio files (MP3, WAV, FLAC, M4A, etc.) onto the dashboard

@@ -25,6 +25,7 @@ export async function getRecording(id) {
 export async function uploadAudio(file, options = {}) {
   const formData = new FormData();
   formData.append('audio', file);
+  if (options.engine) formData.append('engine', options.engine);
   if (options.model) formData.append('model', options.model);
   if (options.language) formData.append('language', options.language);
   if (options.autoTranscribe !== undefined) {
@@ -91,4 +92,22 @@ export function getAudioUrl(id) {
 
 export function getExportUrl(id, format) {
   return `${API_BASE}/recordings/${id}/export/${format}`;
+}
+
+export async function getVoices() {
+  const res = await request('/brighton/voices');
+  return res.json();
+}
+
+export async function draftOrder(id, voice) {
+  const res = await fetch(`${API_BASE}/brighton/${id}/draft`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ voice }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Drafting failed' }));
+    throw new Error(err.error || 'Drafting failed');
+  }
+  return res.blob();
 }

@@ -10,6 +10,7 @@ const { Server } = require('socket.io');
 require('./database');
 
 const recordingsRouter = require('./routes/recordings');
+const brightonRouter = require('./routes/brighton');
 
 const app = express();
 const server = http.createServer(app);
@@ -45,6 +46,7 @@ app.use(express.json());
 
 // API routes
 app.use('/api/recordings', recordingsRouter);
+app.use('/api/brighton', brightonRouter);
 
 // Serve uploaded audio files
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));

@@ -31,7 +31,7 @@ export default function SpeakerRenameModal({ speaker, currentName, onRename, onC
       />
 
       {/* Modal */}
-      <div style={{
+      <div data-ghost="Reploace the placeholder with the name of the speaker" style={{
         position: 'fixed',
         top: '50%',
         left: '50%',
@@ -61,7 +61,7 @@ export default function SpeakerRenameModal({ speaker, currentName, onRename, onC
             </label>
           </div>
 
-          <input
+          <input 
             ref={inputRef}
             type="text"
             value={name}
