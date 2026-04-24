@@ -1,9 +1,14 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const db = require('../database');
+const jobTracker = require('./jobTracker');
 
 const SCRIPT_PATH = path.join(__dirname, '..', '..', 'scripts', 'transcribe.py');
 const VENV_PYTHON = path.join(__dirname, '..', '..', 'venv', 'bin', 'python3');
+
+function recordingExists(recordingId) {
+  return !!db.prepare('SELECT 1 FROM recordings WHERE id = ?').get(recordingId);
+}
 
 function startTranscription(recordingId, audioPath, options = {}) {
   const { model = 'large-v3', language = null } = options;
@@ -31,6 +36,17 @@ function startTranscription(recordingId, audioPath, options = {}) {
     env: { ...process.env, PYTHONUNBUFFERED: '1' },
   });
 
+  let cancelled = false;
+  jobTracker.register(recordingId, {
+    engine: 'whisperx',
+    cancel: () => {
+      cancelled = true;
+      try { proc.kill('SIGTERM'); } catch { /* already dead */ }
+      // If SIGTERM doesn't take in 5s, escalate to SIGKILL.
+      setTimeout(() => { try { proc.kill('SIGKILL'); } catch { /* ok */ } }, 5000);
+    },
+  });
+
   let stderrBuf = '';
 
   proc.stdout.on('data', (data) => {
@@ -52,6 +68,18 @@ function startTranscription(recordingId, audioPath, options = {}) {
   });
 
   proc.on('close', (code) => {
+    jobTracker.unregister(recordingId);
+
+    // If the recording row was deleted mid-job, skip import + status updates
+    // and clean up the orphan JSON the worker may have written.
+    if (cancelled || !recordingExists(recordingId)) {
+      console.log(`[transcribe:${recordingId}] Cancelled or recording deleted; skipping import`);
+      const fs = require('fs');
+      const jsonPath = path.join(path.dirname(audioPath), `${recordingId}.json`);
+      if (fs.existsSync(jsonPath)) { try { fs.unlinkSync(jsonPath); } catch { /* ok */ } }
+      return;
+    }
+
     if (code === 0) {
       try {
         importTranscriptionResult(recordingId, path.join(path.dirname(audioPath), `${recordingId}.json`));
