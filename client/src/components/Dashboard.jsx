@@ -100,54 +100,30 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Engine + model selector */}
-      <div data-ghost="Select the transcription engine and model here" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Engine:</label>
-          <select
-            value={engine}
-            onChange={(e) => {
-              const next = e.target.value;
-              setEngine(next);
-              setModel(next === 'openai' ? 'gpt-4o-transcribe-diarize' : 'large-v3');
-            }}
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--text-primary)',
-              padding: '6px 10px',
-              fontSize: 13,
-            }}
-          >
-            <option value="whisperx">WhisperX (local)</option>
-            <option value="openai">OpenAI gpt-4o-transcribe-diarize (cloud)</option>
-          </select>
-        </div>
-
-        {engine === 'whisperx' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Whisper Model:</label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-primary)',
-                padding: '6px 10px',
-                fontSize: 13,
-              }}
-            >
-              <option value="large-v3">large-v3 (best quality)</option>
-              <option value="large-v2">large-v2</option>
-              <option value="medium">medium</option>
-              <option value="small">small</option>
-              <option value="base">base (fastest)</option>
-            </select>
-          </div>
-        )}
+      {/* Model selector — engine selector is hidden; OpenAI lane code is on
+          disk but unwired from the UI until we have a model that performs
+          acceptably for long recordings. WhisperX is the only user-facing
+          engine for now. */}
+      <div data-ghost="Select the transcription model here" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Whisper Model:</label>
+        <select
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          style={{
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--text-primary)',
+            padding: '6px 10px',
+            fontSize: 13,
+          }}
+        >
+          <option value="large-v3">large-v3 (best quality)</option>
+          <option value="large-v2">large-v2</option>
+          <option value="medium">medium</option>
+          <option value="small">small</option>
+          <option value="base">base (fastest)</option>
+        </select>
       </div>
 
       {/* Drop zone */}

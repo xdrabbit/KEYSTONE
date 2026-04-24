@@ -7,6 +7,7 @@ const db = require('../database');
 const { startTranscription } = require('../services/transcription');
 const { startOpenAITranscription } = require('../services/openaiTranscription');
 const { exportMarkdown, exportPDF, exportDocx } = require('../services/exporter');
+const jobTracker = require('../services/jobTracker');
 
 const VALID_ENGINES = new Set(['whisperx', 'openai']);
 
@@ -139,10 +140,26 @@ router.post('/:id/transcribe', (req, res) => {
   const audioPath = path.join(UPLOADS_DIR, recording.filename);
   if (!fs.existsSync(audioPath)) return res.status(404).json({ error: 'Audio file missing' });
 
+  // If there's already a job for this recording, cancel it before starting a
+  // new one. Otherwise rapid retry clicks (or a UI retry racing with an
+  // already-running transcribe) leave duplicate workers competing on the same
+  // row, both eventually trying to import into the same recording.
+  if (jobTracker.has(req.params.id)) {
+    console.log(`[transcribe-route:${req.params.id}] Cancelling in-flight job before retranscribe`);
+    jobTracker.cancel(req.params.id);
+  }
+
   // Clear existing transcript data
   db.prepare('DELETE FROM words WHERE recording_id = ?').run(req.params.id);
   db.prepare('DELETE FROM segments WHERE recording_id = ?').run(req.params.id);
   db.prepare('DELETE FROM speaker_labels WHERE recording_id = ?').run(req.params.id);
+
+  // Best-effort cleanup of any chunk temps left behind by the cancelled job.
+  for (const f of fs.readdirSync(UPLOADS_DIR)) {
+    if (f.startsWith(`${req.params.id}.openai-`)) {
+      try { fs.unlinkSync(path.join(UPLOADS_DIR, f)); } catch { /* best effort */ }
+    }
+  }
 
   const requestedEngine = ((req.body && req.body.engine) || recording.engine || 'whisperx').toLowerCase();
   const engine = VALID_ENGINES.has(requestedEngine) ? requestedEngine : 'whisperx';
@@ -266,6 +283,14 @@ router.delete('/:id', (req, res) => {
   const recording = db.prepare('SELECT * FROM recordings WHERE id = ?').get(req.params.id);
   if (!recording) return res.status(404).json({ error: 'Not found' });
 
+  // Cancel any in-flight transcription job before tearing down state. The
+  // worker (whisperx subprocess or openai async chain) sees the cancel
+  // signal and bows out without trying to import into a dropped row.
+  const cancelled = jobTracker.cancel(req.params.id);
+  if (cancelled) {
+    console.log(`[delete:${req.params.id}] Cancelled in-flight transcription`);
+  }
+
   // Delete audio file
   const audioPath = path.join(UPLOADS_DIR, recording.filename);
   if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
@@ -274,10 +299,18 @@ router.delete('/:id', (req, res) => {
   const jsonPath = path.join(UPLOADS_DIR, `${req.params.id}.json`);
   if (fs.existsSync(jsonPath)) fs.unlinkSync(jsonPath);
 
+  // Also clean up any OpenAI lane chunk temp files the worker didn't get
+  // to remove itself.
+  for (const f of fs.readdirSync(UPLOADS_DIR)) {
+    if (f.startsWith(`${req.params.id}.openai-`)) {
+      try { fs.unlinkSync(path.join(UPLOADS_DIR, f)); } catch { /* best effort */ }
+    }
+  }
+
   // Database cascading delete handles segments, words, speaker_labels
   db.prepare('DELETE FROM recordings WHERE id = ?').run(req.params.id);
 
-  res.json({ success: true });
+  res.json({ success: true, cancelled });
 });
 
 module.exports = router;

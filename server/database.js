@@ -107,4 +107,17 @@ if (!recordingCols.some((c) => c.name === 'engine')) {
   db.exec(`ALTER TABLE recordings ADD COLUMN engine TEXT NOT NULL DEFAULT 'whisperx'`);
 }
 
+// Stuck-job recovery on boot: any row left at status='processing' belongs
+// to a worker that died with the previous server process — the new process
+// has no way to revive it, so leaving the row at 'processing' creates a
+// permanent UI spinner. Roll forward to 'error' so the user sees a clear
+// failure and can retry.
+const reset = db.prepare(`
+  UPDATE recordings SET status = 'error', updated_at = datetime('now')
+  WHERE status = 'processing'
+`).run();
+if (reset.changes > 0) {
+  console.log(`[database] Reset ${reset.changes} stuck 'processing' row(s) to 'error' on startup`);
+}
+
 module.exports = db;
