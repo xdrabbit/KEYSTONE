@@ -5,7 +5,17 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
 const { startTranscription } = require('../services/transcription');
+const { startOpenAITranscription } = require('../services/openaiTranscription');
 const { exportMarkdown, exportPDF, exportDocx } = require('../services/exporter');
+
+const VALID_ENGINES = new Set(['whisperx', 'openai']);
+
+function dispatchTranscription(engine, recordingId, audioPath, options) {
+  if (engine === 'openai') {
+    return startOpenAITranscription(recordingId, audioPath, options);
+  }
+  return startTranscription(recordingId, audioPath, options);
+}
 
 const router = express.Router();
 
@@ -99,16 +109,22 @@ router.post('/upload', upload.single('audio'), (req, res) => {
 
   const id = req.recordingId;
   const autoTranscribe = req.body.autoTranscribe !== 'false';
-  const model = req.body.model || 'large-v3';
+  const requestedEngine = (req.body.engine || 'whisperx').toLowerCase();
+  const engine = VALID_ENGINES.has(requestedEngine) ? requestedEngine : 'whisperx';
+  const model = req.body.model || (engine === 'openai' ? 'gpt-4o-transcribe-diarize' : 'large-v3');
   const language = req.body.language || null;
 
   db.prepare(`
-    INSERT INTO recordings (id, filename, original_name, status, model)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, req.file.filename, req.file.originalname, 'pending', model);
+    INSERT INTO recordings (id, filename, original_name, status, model, engine)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(id, req.file.filename, req.file.originalname, 'pending', model, engine);
 
   if (autoTranscribe) {
-    startTranscription(id, req.file.path, { model, language });
+    try {
+      dispatchTranscription(engine, id, req.file.path, { model, language });
+    } catch (err) {
+      console.error(`[upload:${id}] Failed to start ${engine} transcription:`, err.message);
+    }
   }
 
   const recording = db.prepare('SELECT * FROM recordings WHERE id = ?').get(id);
@@ -128,12 +144,22 @@ router.post('/:id/transcribe', (req, res) => {
   db.prepare('DELETE FROM segments WHERE recording_id = ?').run(req.params.id);
   db.prepare('DELETE FROM speaker_labels WHERE recording_id = ?').run(req.params.id);
 
-  const model = (req.body && req.body.model) || recording.model || 'large-v3';
+  const requestedEngine = ((req.body && req.body.engine) || recording.engine || 'whisperx').toLowerCase();
+  const engine = VALID_ENGINES.has(requestedEngine) ? requestedEngine : 'whisperx';
+  const defaultModel = engine === 'openai' ? 'gpt-4o-transcribe-diarize' : 'large-v3';
+  const model = (req.body && req.body.model) || (engine === recording.engine ? recording.model : null) || defaultModel;
   const language = (req.body && req.body.language) || null;
 
-  startTranscription(req.params.id, audioPath, { model, language });
+  db.prepare('UPDATE recordings SET engine = ?, model = ?, updated_at = datetime(?) WHERE id = ?')
+    .run(engine, model, new Date().toISOString(), req.params.id);
 
-  res.json({ message: 'Transcription started', status: 'processing' });
+  try {
+    dispatchTranscription(engine, req.params.id, audioPath, { model, language });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Failed to start transcription' });
+  }
+
+  res.json({ message: 'Transcription started', status: 'processing', engine, model });
 });
 
 // Get transcript segments

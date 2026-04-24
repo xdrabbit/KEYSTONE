@@ -25,6 +25,7 @@ export async function getRecording(id) {
 export async function uploadAudio(file, options = {}) {
   const formData = new FormData();
   formData.append('audio', file);
+  if (options.engine) formData.append('engine', options.engine);
   if (options.model) formData.append('model', options.model);
   if (options.language) formData.append('language', options.language);
   if (options.autoTranscribe !== undefined) {
