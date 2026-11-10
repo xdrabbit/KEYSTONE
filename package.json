@@ -8,7 +8,8 @@
     "server": "node server/index.js",
     "client": "cd client && npx vite --host",
     "build": "node scripts/generate-release-manifest.js && cd client && npx vite build",
-    "transcribe": "python3 scripts/transcribe.py"
+    "transcribe": "python3 scripts/transcribe.py",
+    "test:brighton": "python3 -m unittest discover -s server/services/brighton/tests -v && node --test server/brighton.test.js"
   },
   "repository": {
     "type": "git",
