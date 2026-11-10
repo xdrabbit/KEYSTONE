@@ -28,7 +28,17 @@ SCHEMA_MAP = {
     "court_order": COURT_ORDER_SCHEMA,
 }
 
-MODEL = "claude-sonnet-4-20250514"
+# Model is env-overridable so the next model retirement is a .env change,
+# not a code change. See .env.example (BRIGHTON_DRAFTER_MODEL).
+DEFAULT_MODEL = "claude-sonnet-5-5"
+MODEL = os.getenv("BRIGHTON_DRAFTER_MODEL") or DEFAULT_MODEL
+
+
+def response_text(response) -> str:
+    """Join the text blocks of a Messages API response (skips non-text blocks)."""
+    return "".join(
+        block.text for block in response.content if getattr(block, "type", "text") == "text"
+    ).strip()
 
 
 def parse_lmd(content: str) -> dict:
@@ -114,7 +124,7 @@ def draft_section(
         messages=[{"role": "user", "content": user_prompt}],
     )
 
-    return response.content[0].text.strip()
+    return response_text(response)
 
 
 def draft(lmd_path: str, output_path: str = None) -> str:

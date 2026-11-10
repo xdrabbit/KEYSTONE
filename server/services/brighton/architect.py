@@ -98,7 +98,9 @@ def extract_metadata(facts: str) -> dict:
         if ":" in line:
             key, _, val = line.partition(":")
             clean_key = key.strip().upper()
-            if clean_key in mapping:
+            # First occurrence wins: the header block comes first, and body
+            # lines like "Commissioner: contempt reserved" must not clobber it.
+            if clean_key in mapping and val.strip() and mapping[clean_key] not in meta:
                 meta[mapping[clean_key]] = val.strip()
 
     return meta

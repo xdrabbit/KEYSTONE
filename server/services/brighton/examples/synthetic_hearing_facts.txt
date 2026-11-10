@@ -1,0 +1,43 @@
+HEARING: March 12, 2031
+MOTION: Petitioner's Motion to Enforce Parent-Time and Child Support (SYNTHETIC EXAMPLE)
+COURT: Ninth Judicial District, Juniper County
+CASE NUMBER: 990000123
+JUDGE: Okonkwo
+COMMISSIONER: Vance
+PETITIONER: Dana R. Whitlock
+RESPONDENT: Corwin J. Whitlock
+ATTORNEY PETITIONER: Lucinda Arroyo | Arroyo Family Law | 100 Example Way | Anytown UT 84000 | (801) 555-0100 | counsel@example.com
+ATTORNEY RESPONDENT: Gideon Pell | Pell and Marsh
+PETITIONER APPEARANCE: in person
+RESPONDENT APPEARANCE: WebEx
+
+NOTE: Everything in this file is invented for demonstration. No real case, party, or court.
+
+ISSUE 1 — PARENT-TIME EXCHANGES
+Petitioner argues weekend exchanges have been repeatedly late. Respondent says his shift
+ends at 5:30 p.m. and he cannot make a 5:00 p.m. exchange.
+Commissioner: Friday exchanges moved to 6:00 p.m. at the Juniper Public Library parking lot.
+Sunday return stays at 6:00 p.m., same location. Fifteen-minute grace period, then the
+waiting parent may leave and the parent-time is forfeited for that weekend.
+
+ISSUE 2 — CHILD SUPPORT ARREARS
+Parties stipulated on the record that arrears are $1,850 through February 2031.
+Commissioner: Respondent to pay $1,850 in arrears within 30 days, through the Office of
+Recovery Services. Ongoing support unchanged.
+
+ISSUE 3 — FINANCIAL DECLARATION
+Respondent has not filed an updated financial declaration since changing jobs.
+Commissioner: Respondent to file and serve an updated financial declaration with his two
+most recent pay stubs within 14 days.
+
+ISSUE 4 — COMMUNICATION
+Commissioner: both parties to enroll in a co-parenting communication application within
+7 days and use it for all non-emergency communication about the children.
+
+ISSUE 5 — CONTEMPT
+Petitioner asked for contempt findings on the late exchanges.
+Commissioner: contempt reserved. Will be revisited at the review hearing.
+
+REVIEW HEARING
+Set for May 14, 2031 at 9:00 a.m. before Commissioner Vance.
+Petitioner's counsel to prepare the order.
